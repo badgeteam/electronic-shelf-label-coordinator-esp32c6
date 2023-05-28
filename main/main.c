@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "esp_event.h"
 #include "802154_proto.h"
 #include "esl_proto.h"
 #include "esp_err.h"
@@ -150,7 +151,6 @@ void handle_packet(uint8_t* packet, uint8_t packet_length) {
     mac_fcs_t* fcs = (mac_fcs_t*) &packet[position];
     position += sizeof(uint16_t);
 
-    /*
     ESP_LOGI(RADIO_TAG, "Frame type:                   %x", fcs->frameType);
     ESP_LOGI(RADIO_TAG, "Security Enabled:             %s", fcs->secure ? "True" : "False");
     ESP_LOGI(RADIO_TAG, "Frame pending:                %s", fcs->framePending ? "True" : "False");
@@ -162,10 +162,9 @@ void handle_packet(uint8_t* packet, uint8_t packet_length) {
     ESP_LOGI(RADIO_TAG, "Destination addressing mode:  %x", fcs->destAddrType);
     ESP_LOGI(RADIO_TAG, "Frame version:                %x", fcs->frameVer);
     ESP_LOGI(RADIO_TAG, "Source addressing mode:       %x", fcs->srcAddrType);
-    */
 
     if (fcs->panIdCompressed == false) {
-        // ESP_LOGE(RADIO_TAG, "PAN identifier not compressed, ignoring packet");
+        ESP_LOGE(RADIO_TAG, "PAN identifier not compressed, ignoring packet");
         // return;
     }
 
@@ -192,14 +191,14 @@ void handle_packet(uint8_t* packet, uint8_t packet_length) {
     switch (fcs->frameType) {
         case FRAME_TYPE_BEACON:
             {
-                // ESP_LOGI(RADIO_TAG, "Beacon");
+                ESP_LOGI(RADIO_TAG, "Beacon");
                 break;
             }
         case FRAME_TYPE_DATA:
             {
                 uint8_t sequence_number = packet[position];
                 position += sizeof(uint8_t);
-                // ESP_LOGI(RADIO_TAG, "Data (%u)", sequence_number);
+                ESP_LOGI(RADIO_TAG, "Data (%u)", sequence_number);
 
                 uint16_t pan_id         = 0;
                 uint8_t  dst_addr[8]    = {0};
@@ -211,7 +210,7 @@ void handle_packet(uint8_t* packet, uint8_t packet_length) {
                 switch (fcs->destAddrType) {
                     case ADDR_MODE_NONE:
                         {
-                            // ESP_LOGI(RADIO_TAG, "Without PAN ID or address field");
+                            ESP_LOGI(RADIO_TAG, "Without PAN ID or address field");
                             break;
                         }
                     case ADDR_MODE_SHORT:
@@ -224,9 +223,9 @@ void handle_packet(uint8_t* packet, uint8_t packet_length) {
                                 broadcast = true;
                                 pan_id    = *((uint16_t*) &packet[position]);  // srcPan
                                 position += sizeof(uint16_t);
-                                // ESP_LOGI(RADIO_TAG, "Broadcast on PAN %04x", pan_id);
+                                ESP_LOGI(RADIO_TAG, "Broadcast on PAN %04x", pan_id);
                             } else {
-                                // ESP_LOGI(RADIO_TAG, "On PAN %04x to short address %04x", pan_id, short_dst_addr);
+                                ESP_LOGI(RADIO_TAG, "On PAN %04x to short address %04x", pan_id, short_dst_addr);
                             }
                             break;
                         }
@@ -238,8 +237,8 @@ void handle_packet(uint8_t* packet, uint8_t packet_length) {
                                 dst_addr[idx] = packet[position + sizeof(dst_addr) - 1 - idx];
                             }
                             position += sizeof(dst_addr);
-                            // ESP_LOGI(RADIO_TAG, "On PAN %04x to long address %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x", pan_id, dst_addr[0],
-                            // dst_addr[1], dst_addr[2], dst_addr[3], dst_addr[4], dst_addr[5], dst_addr[6], dst_addr[7]);
+                            ESP_LOGI(RADIO_TAG, "On PAN %04x to long address %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x", pan_id, dst_addr[0],
+                              dst_addr[1], dst_addr[2], dst_addr[3], dst_addr[4], dst_addr[5], dst_addr[6], dst_addr[7]);
                             break;
                         }
                     default:
@@ -252,14 +251,14 @@ void handle_packet(uint8_t* packet, uint8_t packet_length) {
                 switch (fcs->srcAddrType) {
                     case ADDR_MODE_NONE:
                         {
-                            // ESP_LOGI(RADIO_TAG, "Originating from the PAN coordinator");
+                            ESP_LOGI(RADIO_TAG, "Originating from the PAN coordinator");
                             break;
                         }
                     case ADDR_MODE_SHORT:
                         {
                             short_src_addr = *((uint16_t*) &packet[position]);
                             position += sizeof(uint16_t);
-                            // ESP_LOGI(RADIO_TAG, "Originating from short address %04x", short_src_addr);
+                            ESP_LOGI(RADIO_TAG, "Originating from short address %04x", short_src_addr);
                             break;
                         }
                     case ADDR_MODE_LONG:
@@ -268,8 +267,8 @@ void handle_packet(uint8_t* packet, uint8_t packet_length) {
                                 src_addr[idx] = packet[position + sizeof(src_addr) - 1 - idx];
                             }
                             position += sizeof(src_addr);
-                            // ESP_LOGI(RADIO_TAG, "Originating from long address %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x", src_addr[0], src_addr[1],
-                            // src_addr[2], src_addr[3], src_addr[4], src_addr[5], src_addr[6], src_addr[7]);
+                            ESP_LOGI(RADIO_TAG, "Originating from long address %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x", src_addr[0], src_addr[1],
+                              src_addr[2], src_addr[3], src_addr[4], src_addr[5], src_addr[6], src_addr[7]);
                             break;
                         }
                     default:
@@ -285,11 +284,11 @@ void handle_packet(uint8_t* packet, uint8_t packet_length) {
                 uint8_t  data_length   = packet_length - position - sizeof(uint16_t);
                 position += data_length;
 
-                // ESP_LOGI(RADIO_TAG, "Data length: %u", data_length);
+                ESP_LOGI(RADIO_TAG, "Data length: %u", data_length);
 
                 uint16_t checksum = *((uint16_t*) &packet[position]);
 
-                // ESP_LOGI(RADIO_TAG, "Checksum: %04x", checksum);
+                ESP_LOGI(RADIO_TAG, "Checksum: %04x", checksum);
 
                 ESP_LOGI(RADIO_TAG, "PAN %04x S %04x %02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X to %04x %02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X %s", pan_id,
                                short_src_addr, src_addr[0], src_addr[1], src_addr[2], src_addr[3], src_addr[4], src_addr[5], src_addr[6], src_addr[7],
@@ -307,12 +306,12 @@ void handle_packet(uint8_t* packet, uint8_t packet_length) {
         case FRAME_TYPE_ACK:
             {
                 uint8_t sequence_number = packet[position++];
-                // ESP_LOGI(RADIO_TAG, "Ack (%u)", sequence_number);
+                ESP_LOGI(RADIO_TAG, "Ack (%u)", sequence_number);
                 break;
             }
         default:
             {
-                // ESP_LOGE(RADIO_TAG, "Packet ignored because of frame type (%u)", fcs->frameType);
+                ESP_LOGE(RADIO_TAG, "Packet ignored because of frame type (%u)", fcs->frameType);
                 break;
             }
     }
@@ -326,22 +325,33 @@ typedef struct {
 QueueHandle_t packet_rx_queue = NULL;
 
 void esp_ieee802154_receive_done(uint8_t* frame, esp_ieee802154_frame_info_t* frame_info) {
+    ESP_EARLY_LOGI(RADIO_TAG, "rx OK, received %d bytes", frame[0]);
     static packet_t packet;
     packet.length = frame[0];
     memcpy(packet.data, &frame[1], packet.length);
     xQueueSendFromISR(packet_rx_queue, (void*) &packet, pdFALSE);
 }
 
-void esp_ieee802154_energy_detect_done(int8_t power) { ESP_EARLY_LOGI(RADIO_TAG, "ed_scan_rss_value: %d dB", power); }
-
-void esp_ieee802154_transmit_sfd_done(uint8_t* frame) { ESP_EARLY_LOGI(RADIO_TAG, "tx sfd done, Radio state: %d", esp_ieee802154_get_state()); }
+void esp_ieee802154_receive_failed(uint16_t error) {
+    ESP_EARLY_LOGI(RADIO_TAG, "rx failed, error %d", error);
+}
 
 void esp_ieee802154_receive_sfd_done(void) {
-    // ESP_EARLY_LOGI(RADIO_TAG, "rx sfd done, Radio state: %d", esp_ieee802154_get_state());
+    ESP_EARLY_LOGI(RADIO_TAG, "rx sfd done, Radio state: %d", esp_ieee802154_get_state());
+}
+
+void esp_ieee802154_energy_detect_done(int8_t power) { ESP_EARLY_LOGI(RADIO_TAG, "ed_scan_rss_value: %d dB", power); }
+
+void esp_ieee802154_transmit_sfd_done(uint8_t* frame) {
+    ESP_EARLY_LOGI(RADIO_TAG, "tx sfd done, Radio state: %d", esp_ieee802154_get_state());
 }
 
 void esp_ieee802154_transmit_failed(const uint8_t* frame, esp_ieee802154_tx_error_t error) {
-    ESP_EARLY_LOGI(RADIO_TAG, "the Frame Transmission failed, Failure reason: %d", error);
+    ESP_EARLY_LOGI(RADIO_TAG, "tx failed, error %d", error);
+}
+
+void esp_ieee802154_transmit_done(const uint8_t *frame, const uint8_t *ack, esp_ieee802154_frame_info_t *ack_frame_info) {
+    ESP_EARLY_LOGI(RADIO_TAG, "tx done, ack: %d", ack);
 }
 
 // static void ieee802154_task(void *pvParameters) {
@@ -364,6 +374,9 @@ void app_main(void) {
     ESP_LOGI(TAG, "Starting NVS...");
     initialize_nvs();
 
+    ESP_LOGI(TAG, "Create default event loop...");
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+
     ESP_LOGI(TAG, "Initializing mbedtls...");
 
     mbedtls_ccm_init(&ctx);
@@ -378,22 +391,35 @@ void app_main(void) {
 
     packet_rx_queue = xQueueCreate(8, 257);
 
-    esp_ieee802154_enable();
-    esp_phy_enable();
+    ESP_ERROR_CHECK(esp_ieee802154_enable());
+    ESP_ERROR_CHECK(esp_ieee802154_set_promiscuous(false));
+    ESP_ERROR_CHECK(esp_ieee802154_set_rx_when_idle(true));
 
-    esp_ieee802154_set_coordinator(true);
-    esp_ieee802154_set_channnel(11);
-    esp_ieee802154_set_panid(esl_pan);
-    esp_ieee802154_receive();
-    esp_ieee802154_set_rx_when_idle(true);
+    ESP_ERROR_CHECK(esp_ieee802154_set_panid(esl_pan));
+    ESP_ERROR_CHECK(esp_ieee802154_set_coordinator(true));
+
+    ESP_ERROR_CHECK(esp_ieee802154_set_channel(11));
+
+    ESP_ERROR_CHECK(esp_ieee802154_receive());
+
+    uint8_t long_address[8];
+    esp_ieee802154_get_extended_address(long_address);
 
     // ESP_LOGI(TAG, "Starting radio task...");
     // xTaskCreate(ieee802154_task, RADIO_TAG, 4096, NULL, 5, NULL);
 
+    ESP_LOGI(TAG, "Ready, panId=0x%04x, channel=%d, long=%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x, short=%04x",
+             esp_ieee802154_get_panid(), esp_ieee802154_get_channel(),
+             long_address[0], long_address[1], long_address[2], long_address[3],
+             long_address[4], long_address[5], long_address[6], long_address[7],
+             esp_ieee802154_get_short_address());
+
     while (true) {
         static packet_t packet;
-        xQueueReceive(packet_rx_queue, (void*) &packet, portMAX_DELAY);
-        handle_packet(packet.data, packet.length);
+        if (xQueueReceive(packet_rx_queue, (void*) &packet, pdMS_TO_TICKS(1000)) == pdTRUE) {
+            handle_packet(packet.data, packet.length);
+        }
+
     }
 
     mbedtls_ccm_free(&ctx);
