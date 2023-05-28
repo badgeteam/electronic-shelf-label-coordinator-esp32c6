@@ -18,6 +18,9 @@
 #include "nvs_flash.h"
 #include "sdkconfig.h"
 
+#define SHORT_NOT_CONFIGURED 0xFFFE
+#define SHORT_BROADCAST 0xFFFF
+
 uint8_t  esl_key[] = {0xD3, 0x06, 0xD9, 0x34, 0x8E, 0x29, 0xE5, 0xE3, 0x58, 0xBF, 0x29, 0x34, 0x81, 0x20, 0x02, 0xC1};
 uint16_t esl_pan   = 0x4447;
 
@@ -402,12 +405,23 @@ void app_main(void) {
 
     ESP_ERROR_CHECK(esp_ieee802154_receive());
 
+    esp_phy_calibration_data_t cal_data;
+    ESP_ERROR_CHECK(esp_phy_load_cal_data_from_nvs(&cal_data));
+
+    // Set long address to the mac address (with 0xff padding at the end)
+    // Set short address to unconfigured
     uint8_t long_address[8];
-    esp_ieee802154_get_extended_address(long_address);
+    memcpy(&long_address, cal_data.mac, 6);
+    long_address[6] = 0xff;
+    long_address[7] = 0xff;
+    esp_ieee802154_set_extended_address(long_address);
+    esp_ieee802154_set_short_address(SHORT_NOT_CONFIGURED);
+
 
     // ESP_LOGI(TAG, "Starting radio task...");
     // xTaskCreate(ieee802154_task, RADIO_TAG, 4096, NULL, 5, NULL);
 
+    esp_ieee802154_get_extended_address(long_address);
     ESP_LOGI(TAG, "Ready, panId=0x%04x, channel=%d, long=%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x, short=%04x",
              esp_ieee802154_get_panid(), esp_ieee802154_get_channel(),
              long_address[0], long_address[1], long_address[2], long_address[3],
