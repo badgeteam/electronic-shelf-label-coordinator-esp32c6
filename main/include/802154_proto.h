@@ -2,6 +2,10 @@
 
 #include <stdint.h>
 
+#define FRAME_VERSION_STD_2003 0
+#define FRAME_VERSION_STD_2006 1
+#define FRAME_VERSION_STD_2015 2
+
 #define FRAME_TYPE_BEACON       (0)
 #define FRAME_TYPE_DATA         (1)
 #define FRAME_TYPE_ACK          (2)
