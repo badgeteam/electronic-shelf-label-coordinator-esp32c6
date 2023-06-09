@@ -1,8 +1,8 @@
 #include <esp_mac.h>
 #include <math.h>
-#include <stdio.h>
 #include <string.h>
 
+#include "bitmap.h"
 #include "802154_proto.h"
 #include "esl_proto.h"
 #include "esp_err.h"
@@ -11,19 +11,17 @@
 #include "esp_ieee802154.h"
 #include "esp_log.h"
 #include "esp_phy_init.h"
-#include "esp_system.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
 #include "ieee802154.h"
 #include "images.h"
-#include "mbedtls/ccm.h"
-#include "mbedtls/cipher.h"
 #include "nvs.h"
 #include "nvs_flash.h"
 #include "sdkconfig.h"
 
 // Enable a workaround for problems with the receive mode
+// See https://github.com/espressif/esp-idf/issues/11549
 #define MAKE_IT_WORK
 
 #define SHORT_MY_ADDRESS     0x1111
@@ -34,7 +32,6 @@ uint8_t  my_esl_key[] = {0xD3, 0x06, 0xD9, 0x34, 0x8E, 0x29, 0xE5, 0xE3, 0x58, 0
 uint16_t my_esl_pan   = 0x4447;
 
 static const char* RADIO_TAG = "802.15.4 radio";
-extern uint32_t verify_bitmap(uint8_t *bitmap);
 
 QueueHandle_t packet_rx_queue  = NULL;
 QueueHandle_t esl_packet_queue = NULL;
@@ -474,12 +471,12 @@ static void esl_handler_task(void* pvParameters) {
 }
 
 void app_main(void) {
-    nvs_flash_erase();
     ESP_LOGI(TAG, "Starting NVS...");
     initialize_nvs();
 
     esp_log_level_set(RADIO_TAG, ESP_LOG_INFO);
     esp_log_level_set("esp_esl", ESP_LOG_INFO);
+    esp_log_level_set(TAG, ESP_LOG_INFO);
 
     if (verify_bitmap(test_image) != 1) {
         ESP_LOGE(TAG, "Bitmap failed sanity check");
@@ -549,4 +546,3 @@ void app_main(void) {
         }
     }
 }
-
