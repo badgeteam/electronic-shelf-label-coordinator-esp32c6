@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "main.c" "ieee802154.c" "esp_esl.c"
+    SRCS "main.c" "ieee802154.c" "esp_esl.c" "images.c"
     INCLUDE_DIRS "."
                  "include"
 )
