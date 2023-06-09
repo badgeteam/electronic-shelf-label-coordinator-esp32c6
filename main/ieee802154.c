@@ -12,7 +12,7 @@
 
 static void reverse_memcpy(uint8_t *restrict dst, const uint8_t *restrict src, size_t n);
 
-uint8_t iee802154_header(const uint16_t *src_pan, ieee802154_address_t *src, const uint16_t *dst_pan, ieee802154_address_t *dst, uint8_t *header, uint8_t header_length) {
+uint8_t ieee802154_header(const uint16_t *src_pan, ieee802154_address_t *src, const uint16_t *dst_pan, ieee802154_address_t *dst, uint8_t *header, uint8_t header_length) {
     uint8_t frame_header_len = 2;
     mac_fcs_t frame_header = {
             .frameType = FRAME_TYPE_DATA,
@@ -33,6 +33,12 @@ uint8_t iee802154_header(const uint16_t *src_pan, ieee802154_address_t *src, con
     bool src_pan_present = src_pan != NULL;
     bool dst_pan_present = dst_pan != NULL;
 
+    if (src_pan_present && dst_pan_present && src_present && dst_present) {
+        if (src_pan == dst_pan) {
+            frame_header.panIdCompressed = true;
+        }
+    }
+
     if (!frame_header.sequenceNumberSuppression) {
         frame_header_len += 1;
     }
@@ -47,7 +53,7 @@ uint8_t iee802154_header(const uint16_t *src_pan, ieee802154_address_t *src, con
         frame_header_len += 8;
     }
 
-    if (src_pan_present) {
+    if (src_pan_present && !frame_header.panIdCompressed) {
         frame_header_len +=2;
     }
 
@@ -82,7 +88,7 @@ uint8_t iee802154_header(const uint16_t *src_pan, ieee802154_address_t *src, con
         position += 8;
     }
 
-    if (src_pan != NULL) {
+    if (src_pan != NULL && !frame_header.panIdCompressed) {
         memcpy(&header[position], src_pan, sizeof(uint16_t));
         position += 2;
     }

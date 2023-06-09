@@ -16,6 +16,6 @@ typedef struct {
     };
 } ieee802154_address_t ;
 
-uint8_t iee802154_header(const uint16_t *src_pan, ieee802154_address_t *src, const uint16_t *dst_pan, ieee802154_address_t *dst, uint8_t *header, uint8_t header_length);
+uint8_t ieee802154_header(const uint16_t *src_pan, ieee802154_address_t *src, const uint16_t *dst_pan, ieee802154_address_t *dst, uint8_t *header, uint8_t header_length);
 
 #endif  // EPD_STATION_IEEE802154_H

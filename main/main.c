@@ -1,3 +1,4 @@
+#include <esp_mac.h>
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -5,6 +6,7 @@
 #include "802154_proto.h"
 #include "esl_proto.h"
 #include "esp_err.h"
+#include "esp_esl.h"
 #include "esp_event.h"
 #include "esp_ieee802154.h"
 #include "esp_log.h"
@@ -13,6 +15,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
+#include "ieee802154.h"
 #include "mbedtls/ccm.h"
 #include "mbedtls/cipher.h"
 #include "nvs.h"
@@ -25,9 +28,9 @@
 #define SHORT_MY_ADDRESS 0x1111
 #define SHORT_NOT_CONFIGURED 0xFFFE
 #define SHORT_BROADCAST 0xFFFF
-
-uint8_t  esl_key[] = {0xD3, 0x06, 0xD9, 0x34, 0x8E, 0x29, 0xE5, 0xE3, 0x58, 0xBF, 0x29, 0x34, 0x81, 0x20, 0x02, 0xC1};
-uint16_t esl_pan   = 0x4447;
+extern void phy_i2c_check(void);
+uint8_t  my_esl_key[] = {0xD3, 0x06, 0xD9, 0x34, 0x8E, 0x29, 0xE5, 0xE3, 0x58, 0xBF, 0x29, 0x34, 0x81, 0x20, 0x02, 0xC1};
+uint16_t my_esl_pan   = 0x4447;
 
 static const char* RADIO_TAG = "802.15.4 radio";
 
@@ -50,7 +53,7 @@ typedef struct esl_packet {
         struct CheckinInfo check_in_info; // PKT_CHECKIN
         struct PendingInfo pending_info;  // PKT_CHECKOUT
     };
-} esl_packet_t;
+} __attribute__((packed, aligned(1))) esl_packet_t;
 
 void parse_esl_packet(uint8_t* data, uint8_t length, uint8_t* src_addr, uint8_t* dst_addr) {
     esl_packet_t esl_packet;
@@ -145,7 +148,6 @@ void handle_packet(uint8_t* packet, uint8_t packet_length) {
 
     if (fcs->frameVer != 0x0) {
         ESP_LOGE(RADIO_TAG, "Unsupported frame version, ignoring packet");
-        return;
     }
 
     switch (fcs->frameType) {
@@ -258,7 +260,7 @@ void handle_packet(uint8_t* packet, uint8_t packet_length) {
                 if (broadcast)
                     for (uint8_t idx = 0; idx < 8; idx++) dst_addr[idx] = 0xFF;
 
-                if (pan_id != esl_pan) return;  // Filter, only process electronic shelf label packets
+                if (pan_id != my_esl_pan) return;  // Filter, only process electronic shelf label packets
 
                 decode_packet(header, header_length, data, data_length, src_addr, dst_addr);
                 break;
@@ -329,6 +331,52 @@ static void initialize_nvs(void) {
     ESP_ERROR_CHECK(err);
 }
 
+static void queue_assoc_response(uint8_t src[8], uint8_t dst[8]) {
+    struct AssocInfo assoc_info = {
+        .checkinDelay = 15000, // ms
+        .failedCheckinsTillBlank = 5,
+        .failedCheckinsTillDissoc = 25,
+        .retryDelay = 500, // ms
+    };
+    memcpy(&assoc_info.newKey, my_esl_key, 16);
+
+    esl_packet_t response = {
+        .packet_type = PKT_ASSOC_RESP,
+        .assoc_info = assoc_info
+    };
+
+    memcpy(response.source_addr, src, 8);
+    memcpy(response.dest_addr, dst, 8);
+
+    uint8_t buffer[256];
+
+    ieee802154_address_t dst_addr = {
+        .mode = ADDR_MODE_LONG,
+    };
+    memcpy(dst_addr.long_address, response.dest_addr, 8);
+
+    ieee802154_address_t src_addr = {
+        .mode = ADDR_MODE_LONG,
+    };
+    memcpy(src_addr.long_address, response.source_addr, 8);
+
+    uint8_t plaintext[127];
+    memcpy(&plaintext[1], (uint8_t *)&assoc_info, sizeof (struct AssocInfo));
+    plaintext[0] = PKT_ASSOC_RESP;
+    uint8_t plaintext_length = sizeof (struct AssocInfo) + 1;
+
+    int header_length = ieee802154_header(&my_esl_pan, &src_addr, &my_esl_pan, &dst_addr, &buffer[1], 255);
+    int payload_length = esp_esl_aes_ccm_encode(xTaskGetTickCount(), plaintext, plaintext_length, &buffer[1], header_length, response.source_addr, &buffer[1 + header_length], 255 - header_length);
+
+    buffer[0] = header_length + payload_length + 2; // FCS_LEN
+    esp_ieee802154_transmit(buffer, false);
+
+    ESP_LOGI(TAG, "Transmitting");
+    ESP_LOG_BUFFER_HEX(TAG, buffer, buffer[0] + 1);
+
+    esp_ieee802154_receive();
+}
+
 #define ESL_HANDLER_TASK_TAG "esl_handler_task"
 typedef struct {
     QueueHandle_t handle;
@@ -362,6 +410,10 @@ static void esl_handler_task(void *pvParameters) {
                            tagInfo->protoVer, tagInfo->state.swVer, tagInfo->state.hwType, tagInfo->state.batteryMv, tagInfo->screenPixWidth,
                            tagInfo->screenMmWidth, tagInfo->screenPixHeight, tagInfo->screenMmHeight, tagInfo->compressionsSupported, tagInfo->maxWaitMsec,
                            tagInfo->screenType);
+
+                    uint8_t myaddr[8];
+                    esp_ieee802154_get_extended_address(myaddr);
+                    queue_assoc_response(myaddr, packet.source_addr);
                     break;
                 }
             case PKT_ASSOC_RESP:
@@ -428,6 +480,7 @@ static void esl_handler_task(void *pvParameters) {
 }
 
 void app_main(void) {
+    nvs_flash_erase();
     ESP_LOGI(TAG, "Starting NVS...");
     initialize_nvs();
 
@@ -435,9 +488,10 @@ void app_main(void) {
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
     ESP_LOGI(TAG, "Initializing mbedtls...");
+    ESP_ERROR_CHECK(esp_esl_aes_ccm_init());
 
     mbedtls_ccm_init(&ctx);
-    int ret = mbedtls_ccm_setkey(&ctx, MBEDTLS_CIPHER_ID_AES, esl_key, sizeof(esl_key) * 8);
+    int ret = mbedtls_ccm_setkey(&ctx, MBEDTLS_CIPHER_ID_AES, my_esl_key, sizeof(my_esl_key) * 8);
 
     if (ret != 0) {
         ESP_EARLY_LOGE(RADIO_TAG, "Failed to set key, rc = %d", ret);
@@ -452,7 +506,7 @@ void app_main(void) {
         .handle = esl_packet_queue
     };
     TaskHandle_t esl_handler_task_handle;
-    if (xTaskCreate(esl_handler_task, "esl_handler_task", 2048, &config, 10, &esl_handler_task_handle) != pdTRUE) {
+    if (xTaskCreate(esl_handler_task, "esl_handler_task", 8192, &config, 10, &esl_handler_task_handle) != pdTRUE) {
         ESP_LOGE(TAG, "Failed to start esl_handler_task");
         return;
     }
@@ -462,27 +516,39 @@ void app_main(void) {
     ESP_ERROR_CHECK(esp_ieee802154_set_promiscuous(false));
     ESP_ERROR_CHECK(esp_ieee802154_set_rx_when_idle(true));
 
-    ESP_ERROR_CHECK(esp_ieee802154_set_panid(esl_pan));
-    ESP_ERROR_CHECK(esp_ieee802154_set_coordinator(true));
+    ESP_ERROR_CHECK(esp_ieee802154_set_coordinator(false));
+    ESP_ERROR_CHECK(esp_ieee802154_set_pending_mode(ESP_IEEE802154_AUTO_PENDING_ZIGBEE));
 
     ESP_ERROR_CHECK(esp_ieee802154_set_channel(11));
-
+    ESP_ERROR_CHECK(esp_ieee802154_set_panid(my_esl_pan));
     ESP_ERROR_CHECK(esp_ieee802154_receive());
 
     esp_phy_calibration_data_t cal_data;
     ESP_ERROR_CHECK(esp_phy_load_cal_data_from_nvs(&cal_data));
 
     // Set long address to the mac address (with 0xff padding at the end)
+    // uint8_t long_address[8];
+    uint8_t eui64[8] = {0};
+    esp_read_mac(eui64, ESP_MAC_IEEE802154);
+    esp_ieee802154_set_extended_address(eui64);
+    esp_ieee802154_set_short_address(0xFFFE);
+
     uint8_t long_address[8];
-    memcpy(&long_address, cal_data.mac, 6);
-    long_address[6] = 0xff;
-    long_address[7] = 0xfe;
-    esp_ieee802154_set_extended_address(long_address);
-    esp_ieee802154_set_short_address(SHORT_MY_ADDRESS);
+    esp_ieee802154_get_extended_address(long_address);
+    ESP_LOGI(TAG, "Ready, panId=0x%04x, channel=%d, long=%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x, short=%04x",
+             esp_ieee802154_get_panid(), esp_ieee802154_get_channel(),
+             long_address[0], long_address[1], long_address[2], long_address[3],
+             long_address[4], long_address[5], long_address[6], long_address[7],
+             esp_ieee802154_get_short_address());
+    ESP_LOGI(TAG, "cca_mode=%d, state=%d, pending_mode=%d",
+             esp_ieee802154_get_cca_mode(), esp_ieee802154_get_state(), esp_ieee802154_get_pending_mode());
+
+    esp_ieee802154_reset_pending_table(false);
 
 #ifdef MAKE_IT_WORK
     long_address[0] = 8;
     esp_ieee802154_transmit(long_address, false);
+    vTaskDelay(pdMS_TO_TICKS(500));
 #endif
 
     // ESP_LOGI(TAG, "Starting radio task...");
@@ -494,6 +560,8 @@ void app_main(void) {
              long_address[0], long_address[1], long_address[2], long_address[3],
              long_address[4], long_address[5], long_address[6], long_address[7],
              esp_ieee802154_get_short_address());
+    ESP_LOGI(TAG, "cca_mode=%d, state=%d, pending_mode=%d",
+             esp_ieee802154_get_cca_mode(), esp_ieee802154_get_state(), esp_ieee802154_get_pending_mode());
 
     while (true) {
         static packet_t packet;

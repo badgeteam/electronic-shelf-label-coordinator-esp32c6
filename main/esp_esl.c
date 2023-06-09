@@ -64,6 +64,12 @@ uint8_t esp_esl_aes_ccm_encode(uint32_t timestamp, uint8_t* plaintext, uint8_t p
         nonce[4 + idx] = src_addr[7 - idx];
     }
 
+    ESP_LOGI(TAG, "Nonce:");
+    ESP_LOG_BUFFER_HEX_LEVEL(TAG, nonce, AES_CCM_NONCE_SIZE, ESP_LOG_INFO);
+
+    ESP_LOGI(TAG, "Plaintext:");
+    ESP_LOG_BUFFER_HEX_LEVEL(TAG, plaintext, plaintext_length, ESP_LOG_INFO);
+
     int ret = mbedtls_ccm_encrypt_and_tag(&ctx, plaintext_length,
                                           nonce, AES_CCM_NONCE_SIZE,
                                           header, header_length,
@@ -75,11 +81,11 @@ uint8_t esp_esl_aes_ccm_encode(uint32_t timestamp, uint8_t* plaintext, uint8_t p
         return 0;
     }
 
-    ESP_LOGD(TAG, "Nonce:");
-    ESP_LOG_BUFFER_HEX_LEVEL(TAG, nonce, AES_CCM_NONCE_SIZE, ESP_LOG_DEBUG);
+    ESP_LOGI(TAG, "Tag:");
+    ESP_LOG_BUFFER_HEX_LEVEL(TAG, output + plaintext_length, tag_length, ESP_LOG_INFO);
 
-    ESP_LOGD(TAG, "Tag:");
-    ESP_LOG_BUFFER_HEX_LEVEL(TAG, output + plaintext_length, tag_length, ESP_LOG_DEBUG);
+    ESP_LOGI(TAG, "Encrypted:");
+    ESP_LOG_BUFFER_HEX_LEVEL(TAG, output, plaintext_length, ESP_LOG_INFO);
 
     // Insert the timestamp into the buffer
     memcpy(output+plaintext_length+tag_length, &timestamp, timestamp_length);
