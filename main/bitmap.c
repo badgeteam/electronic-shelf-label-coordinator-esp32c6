@@ -59,7 +59,7 @@ struct BitmapDrawInfo
 };
 
 
-uint32_t verify_bitmap(uint8_t *bitmap)
+uint32_t verify_bitmap(const uint8_t *bitmap)
 {
     struct BitmapDrawInfo mDrawInfo;
     struct BitmapFileHeader bmph;

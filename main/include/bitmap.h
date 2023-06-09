@@ -7,6 +7,6 @@
 
 #include <stdint.h>
 
-uint32_t verify_bitmap(uint8_t *bitmap);
+uint32_t verify_bitmap(const uint8_t *bitmap);
 
 #endif  // EPD_STATION_BITMAP_H

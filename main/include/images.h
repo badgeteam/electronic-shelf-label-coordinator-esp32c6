@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 
-extern uint8_t test_image[];
+extern const uint8_t default_image_bmp_start[] asm("_binary_default_image_bmp_start");
+extern const uint8_t default_image_bmp_end[] asm("_binary_default_image_bmp_end");
 
 #endif  // EPD_STATION_IMAGES_H

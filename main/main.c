@@ -325,8 +325,8 @@ static void queue_assoc_response(uint8_t src[8], uint8_t dst[8]) {
 
 static void queue_pending_info_message(uint8_t src[8], uint8_t dst[8]) {
     struct PendingInfo pending_info = {
-        .imgUpdateVer  = 4,
-        .imgUpdateSize = 13110,
+        .imgUpdateVer  = 6,
+        .imgUpdateSize = default_image_bmp_end - default_image_bmp_start,
         .osUpdateVer   = 1181116006400,  // Current version?
         .osUpdateSize  = 2 * 1024,
     };
@@ -373,7 +373,7 @@ static void queue_chunk_response(uint8_t src[8], uint8_t dst[8], uint32_t offset
     chunk_info->offset      = offset;
     chunk_info->osUpdatePlz = false;
     chunk_info->rfu         = 0;
-    memcpy(&chunk_info->data, &test_image[offset], len);
+    memcpy(&chunk_info->data, default_image_bmp_start + offset, len);
 
     esl_packet_t response = {.packet_type = PKT_CHUNK_RESP};
     memcpy(&response.chunk_info, (void*) chunk_info, chunk_info_len);
@@ -478,7 +478,7 @@ void app_main(void) {
     esp_log_level_set("esp_esl", ESP_LOG_INFO);
     esp_log_level_set(TAG, ESP_LOG_INFO);
 
-    if (verify_bitmap(test_image) != 1) {
+    if (verify_bitmap(default_image_bmp_start) != 1) {
         ESP_LOGE(TAG, "Bitmap failed sanity check");
     }
 
@@ -510,9 +510,6 @@ void app_main(void) {
     ESP_ERROR_CHECK(esp_ieee802154_set_channel(11));
     ESP_ERROR_CHECK(esp_ieee802154_set_panid(my_esl_pan));
     ESP_ERROR_CHECK(esp_ieee802154_receive());
-
-    esp_phy_calibration_data_t cal_data;
-    ESP_ERROR_CHECK(esp_phy_load_cal_data_from_nvs(&cal_data));
 
     // esp_ieee802154_set_extended_address needs the MAC in reversed byte order
     uint8_t eui64[8] = {0};
