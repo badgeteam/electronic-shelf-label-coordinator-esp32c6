@@ -1,5 +1,3 @@
-//  SPDX-License-Identifier: MIT
-
 #pragma once
 
 #define PKT_ASSOC_REQ  (0xF0)
