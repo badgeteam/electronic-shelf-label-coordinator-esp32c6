@@ -7,3 +7,6 @@ sdkconfig.old
 tools/__pycache__
 .cache
 esp-idf
+sdkconfig
+.idea
+cmake-build-*
