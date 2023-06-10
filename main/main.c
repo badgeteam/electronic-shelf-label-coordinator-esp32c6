@@ -1,3 +1,5 @@
+//  SPDX-License-Identifier: MIT
+
 #include <esp_mac.h>
 #include <math.h>
 #include <string.h>
@@ -479,7 +481,7 @@ void app_main(void) {
     esp_log_level_set(TAG, ESP_LOG_INFO);
 
     if (verify_bitmap(default_image_bmp_start) != 1) {
-        ESP_LOGE(TAG, "Bitmap failed sanity check");
+        ESP_LOGE(TAG, "Embedded bitmap failed sanity check");
     }
 
     ESP_LOGI(TAG, "Create default event loop...");

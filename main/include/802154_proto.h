@@ -1,3 +1,5 @@
+//  SPDX-License-Identifier: MIT
+
 #pragma once
 
 #include <stdint.h>
@@ -15,8 +17,8 @@
 #define FRAME_TYPE_FRAGMENT     (6)
 #define FRAME_TYPE_EXTENDED     (7)
 
-#define ADDR_MODE_NONE     (0)  // PAN ID and address fields are not present
-#define ADDR_MODE_RESERVED (1)  // Reseved
+#define ADDR_MODE_NONE     (0)  // Address fields are not present
+#define ADDR_MODE_RESERVED (1)  // Reserved
 #define ADDR_MODE_SHORT    (2)  // Short address (16-bit)
 #define ADDR_MODE_LONG     (3)  // Extended address (64-bit)
 

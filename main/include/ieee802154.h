@@ -1,6 +1,4 @@
-//
-// Created by Hugo Trippaers on 02/06/2023.
-//
+//  SPDX-License-Identifier: MIT
 
 #ifndef EPD_STATION_IEEE802154_H
 #define EPD_STATION_IEEE802154_H

@@ -1,6 +1,4 @@
-//
-// Created by Hugo Trippaers on 09/06/2023.
-//
+//  SPDX-License-Identifier: MIT
 
 #ifndef EPD_STATION_IMAGES_H
 #define EPD_STATION_IMAGES_H

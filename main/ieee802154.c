@@ -1,6 +1,4 @@
-//
-// Created by Hugo Trippaers on 02/06/2023.
-//
+//  SPDX-License-Identifier: MIT
 
 #include <string.h>
 

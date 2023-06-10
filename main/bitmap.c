@@ -1,7 +1,6 @@
+// SPDX-License-Identifier: MIT
 //
-// Created by Hugo Trippaers on 09/06/2023.
-//
-// Copied from https://github.com/atc1441/ZBS_Flasher/blob/main/custom-firmware/firmware_ch11_low_power/drawing.c
+// Derived from https://github.com/atc1441/ZBS_Flasher/blob/main/custom-firmware/firmware_ch11_low_power/drawing.c
 //
 
 #include <stdint.h>

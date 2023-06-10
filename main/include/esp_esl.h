@@ -1,6 +1,4 @@
-//
-// Created by Hugo Trippaers on 05/06/2023.
-//
+//  SPDX-License-Identifier: MIT
 
 #ifndef IEEE802154_SENDER_ESP_ESL_H
 #define IEEE802154_SENDER_ESP_ESL_H
