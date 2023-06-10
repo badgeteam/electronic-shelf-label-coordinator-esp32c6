@@ -11,12 +11,19 @@ Implemented functionality
 * Upload hardcoded image per request of the tag
 * Optionally provide debug logging on protocol and radio events
 
+Licenses
+---
+See [LICENSE](./LICENSE)
+
+All images contained in this repository are covered by the Creative Commons [CC BY](https://creativecommons.org/licenses/by/4.0/legalcode) license. 
+
 Supported hardware
 ---
 
-This project needs an ESP32 with an onboard 802.15.4 radio. Like the ESP32H2 or 
-the ESP32C6. The application in the current version is verified to work on the 
-ESP32-C6-DevKitC-1 with Solumn shelf labels of type ST-QR29000 flashed with firmware 
+This project needs an ESP32 with an onboard 802.15.4 radio. Like the 
+[ESP32-H2](https://www.espressif.com/en/products/socs/esp32-h2) or 
+the [ESP32-C6](https://www.espressif.com/en/products/socs/esp32-c6). The application in the current version is 
+verified to work on the ESP32-C6-DevKitC-1 with Solumn shelf labels of type ST-QR29000 flashed with firmware 
 1.9.0.0 .
 
 Building
